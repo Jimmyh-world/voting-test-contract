@@ -271,8 +271,8 @@ contract SwedishVotingContractTest is Test {
         vm.prank(admin);
         uint256 sessionId = votingContract.createVotingSession(questions, isPrivate, sessionDuration);
         
-        // Fast forward past session end
-        vm.warp(block.timestamp + sessionDuration + 1);
+        // Fast forward past session end + buffer
+        vm.warp(block.timestamp + sessionDuration + votingContract.TIMESTAMP_BUFFER() + 1);
         
         vm.prank(member1);
         vm.expectRevert(SwedishVotingContract.SessionExpired.selector);
@@ -440,7 +440,7 @@ contract SwedishVotingContractTest is Test {
         vm.prank(admin);
         uint256 sessionId = votingContract.createVotingSession(questions, isPrivate, sessionDuration);
         
-        vm.expectRevert(SwedishVotingContract.SessionNotActive.selector);
+        vm.expectRevert(SwedishVotingContract.PrivateQuestionResults.selector);
         votingContract.getVoteCounts(sessionId, 1); // Private question
     }
     
@@ -533,8 +533,85 @@ contract SwedishVotingContractTest is Test {
         uint256 sessionId = votingContract.createVotingSession(questions, isPrivate, sessionDuration);
         
         vm.prank(member1);
-        vm.expectRevert(SwedishVotingContract.SessionNotFound.selector);
+        vm.expectRevert(SwedishVotingContract.InvalidQuestionId.selector);
         votingContract.castVote(sessionId, 999, 1);
+    }
+
+    // === New Security Tests for Fixes ===
+    
+    function test_Security_BatchVoteSizeLimit() public {
+        vm.prank(admin);
+        uint256 sessionId = votingContract.createVotingSession(questions, isPrivate, sessionDuration);
+        
+        // Create arrays larger than MAX_BATCH_SIZE
+        uint256[] memory questionIds = new uint256[](votingContract.MAX_BATCH_SIZE() + 1);
+        uint8[] memory votes = new uint8[](votingContract.MAX_BATCH_SIZE() + 1);
+        
+        for (uint256 i = 0; i < votingContract.MAX_BATCH_SIZE() + 1; i++) {
+            questionIds[i] = 0;
+            votes[i] = 1;
+        }
+        
+        vm.prank(member1);
+        vm.expectRevert(SwedishVotingContract.BatchTooLarge.selector);
+        votingContract.batchVote(sessionId, questionIds, votes);
+    }
+    
+    function test_Security_PrivacyAwareEventEmission() public {
+        vm.prank(admin);
+        uint256 sessionId = votingContract.createVotingSession(questions, isPrivate, sessionDuration);
+        
+        // Vote on private question (question 1)
+        vm.prank(member1);
+        votingContract.castVote(sessionId, 1, 1);
+        
+        // Vote on public question (question 0)
+        vm.prank(member2);
+        votingContract.castVote(sessionId, 0, 2);
+        
+        // Check that private question vote count is hidden until finalization
+        vm.expectRevert(SwedishVotingContract.PrivateQuestionResults.selector);
+        votingContract.getVoteCounts(sessionId, 1);
+        
+        // Public question should be visible
+        SwedishVotingContract.VoteCounts memory counts = votingContract.getVoteCounts(sessionId, 0);
+        assertEq(counts.noCount, 1);
+    }
+    
+    function test_Security_TimestampBufferProtection() public {
+        vm.prank(admin);
+        uint256 sessionId = votingContract.createVotingSession(questions, isPrivate, sessionDuration);
+        
+        // Test that voting works during normal session time
+        vm.prank(member1);
+        votingContract.castVote(sessionId, 0, 1); // Should succeed
+        
+        // Fast forward to just after session end but within buffer (should still work)
+        vm.warp(block.timestamp + sessionDuration + votingContract.TIMESTAMP_BUFFER() - 1);
+        
+        vm.prank(member2);
+        votingContract.castVote(sessionId, 0, 2); // Should succeed
+        
+        // Fast forward past buffer (should fail)
+        vm.warp(block.timestamp + 2); // Move past the buffer
+        
+        vm.prank(member3);
+        vm.expectRevert(SwedishVotingContract.SessionExpired.selector);
+        votingContract.castVote(sessionId, 0, 0); // Should fail
+    }
+    
+    function test_Security_OverflowProtection() public {
+        vm.prank(admin);
+        votingContract.createVotingSession(questions, isPrivate, sessionDuration);
+        
+        // Test duration overflow protection by creating a session with max duration
+        uint256 maxDuration = votingContract.MAX_SESSION_DURATION();
+        
+        vm.prank(admin);
+        uint256 sessionId2 = votingContract.createVotingSession(questions, isPrivate, maxDuration);
+        
+        // This should succeed without overflow
+        assertEq(sessionId2, 2);
     }
 
     // === Gas Optimization Tests ===

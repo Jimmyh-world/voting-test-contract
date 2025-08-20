@@ -18,6 +18,8 @@ contract SwedishVotingContract is AccessControl, ISwedishVoting {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     uint256 public constant MAX_SESSION_DURATION = 2 hours; // 1-1.5 hours + buffer
     uint256 public constant MIN_SESSION_DURATION = 30 minutes;
+    uint256 public constant TIMESTAMP_BUFFER = 30 seconds; // Protection against timestamp manipulation
+    uint256 public constant MAX_BATCH_SIZE = 50; // Prevent gas bomb attacks
     uint8 public constant VOTE_ABSTAIN = 0;
     uint8 public constant VOTE_YES = 1;
     uint8 public constant VOTE_NO = 2;
@@ -37,14 +39,20 @@ contract SwedishVotingContract is AccessControl, ISwedishVoting {
     error InvalidMemberArray();
     error ZeroAddress();
     error InvalidResultsHash();
+    error DurationOverflow();
+    error VoteCountOverflow();
+    error InvalidQuestionId();
+    error BatchTooLarge();
+    error PrivateQuestionResults();
+    error InsufficientBalance(uint256 available, uint256 required);
 
     // Events are defined in ISwedishVoting interface
 
     // === Data Structures ===
     struct Question {
-        string text;
-        bool isPrivate;
+        bool isPrivate;  // Packed with exists for gas efficiency
         bool exists;
+        string text;     // Dynamic content last
     }
 
     struct Session {
@@ -81,7 +89,8 @@ contract SwedishVotingContract is AccessControl, ISwedishVoting {
         
         admin = _admin;
         _grantRole(ADMIN_ROLE, _admin);
-        _setRoleAdmin(ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE); // Admin role manages itself
+        renounceRole(DEFAULT_ADMIN_ROLE, msg.sender); // Deployer gives up control
 
         emit Deployed(_admin, "1.0.0");
     }
@@ -107,7 +116,7 @@ contract SwedishVotingContract is AccessControl, ISwedishVoting {
         if (!session.exists) revert SessionNotFound();
         if (session.isFinalized) revert SessionAlreadyFinalized();
         if (session.isPaused) revert SessionAlreadyPaused();
-        if (block.timestamp > session.endTime) revert SessionExpired();
+        if (block.timestamp > session.endTime + TIMESTAMP_BUFFER) revert SessionExpired();
         _;
     }
 
@@ -140,7 +149,14 @@ contract SwedishVotingContract is AccessControl, ISwedishVoting {
         Session storage session = _sessions[sessionId];
         
         session.startTime = block.timestamp;
-        session.endTime = block.timestamp + duration;
+        
+        // Overflow protection for duration calculation
+        unchecked {
+            uint256 endTime = block.timestamp + duration;
+            if (endTime < block.timestamp) revert DurationOverflow();
+            session.endTime = endTime;
+        }
+        
         session.questionCount = questions.length;
         session.isPaused = false;
         session.isFinalized = false;
@@ -219,17 +235,25 @@ contract SwedishVotingContract is AccessControl, ISwedishVoting {
     ) external onlyMember sessionActive(sessionId) validVoteValue(vote) {
         Session storage session = _sessions[sessionId];
         
-        // Check if question exists
+        // Check if question exists and is within bounds
+        if (questionId >= session.questionCount) revert InvalidQuestionId();
         if (!session.questions[questionId].exists) revert SessionNotFound();
         
         // Check if already voted
         if (session.hasVoted[questionId][msg.sender]) revert AlreadyVoted();
 
-        // Record vote
+        // Record vote with overflow protection
         session.hasVoted[questionId][msg.sender] = true;
-        session.voteCounts[questionId][vote]++;
+        
+        unchecked {
+            uint256 newCount = session.voteCounts[questionId][vote] + 1;
+            if (newCount == 0) revert VoteCountOverflow(); // Wrapped around
+            session.voteCounts[questionId][vote] = newCount;
+        }
 
-        emit VoteCast(sessionId, questionId, msg.sender, vote, block.timestamp);
+        // Privacy-aware event emission
+        uint8 emittedVote = session.questions[questionId].isPrivate ? 0 : vote;
+        emit VoteCast(sessionId, questionId, msg.sender, emittedVote, block.timestamp);
     }
 
     /// @notice Vote on multiple questions in a single transaction
@@ -244,6 +268,9 @@ contract SwedishVotingContract is AccessControl, ISwedishVoting {
         if (questionIds.length == 0 || questionIds.length != votes.length) {
             revert InvalidQuestionCount();
         }
+        
+        // Prevent gas bomb attacks
+        if (questionIds.length > MAX_BATCH_SIZE) revert BatchTooLarge();
 
         Session storage session = _sessions[sessionId];
 
@@ -254,17 +281,25 @@ contract SwedishVotingContract is AccessControl, ISwedishVoting {
             // Validate vote value
             if (vote > VOTE_NO) revert InvalidVoteValue();
 
-            // Check if question exists
+            // Check if question exists and is within bounds
+            if (questionId >= session.questionCount) revert InvalidQuestionId();
             if (!session.questions[questionId].exists) revert SessionNotFound();
 
             // Check if already voted
             if (session.hasVoted[questionId][msg.sender]) revert AlreadyVoted();
 
-            // Record vote
+            // Record vote with overflow protection
             session.hasVoted[questionId][msg.sender] = true;
-            session.voteCounts[questionId][vote]++;
+            
+            unchecked {
+                uint256 newCount = session.voteCounts[questionId][vote] + 1;
+                if (newCount == 0) revert VoteCountOverflow(); // Wrapped around
+                session.voteCounts[questionId][vote] = newCount;
+            }
 
-            emit VoteCast(sessionId, questionId, msg.sender, vote, block.timestamp);
+            // Privacy-aware event emission
+            uint8 emittedVote = session.questions[questionId].isPrivate ? 0 : vote;
+            emit VoteCast(sessionId, questionId, msg.sender, emittedVote, block.timestamp);
         }
     }
 
@@ -297,11 +332,13 @@ contract SwedishVotingContract is AccessControl, ISwedishVoting {
     ) external view sessionExists(sessionId) returns (VoteCounts memory) {
         Session storage session = _sessions[sessionId];
         
+        // Check if question exists and is within bounds
+        if (questionId >= session.questionCount) revert InvalidQuestionId();
         if (!session.questions[questionId].exists) revert SessionNotFound();
         
         // Only return counts if question is not private or session is finalized
         if (session.questions[questionId].isPrivate && !session.isFinalized) {
-            revert SessionNotActive();
+            revert PrivateQuestionResults();
         }
 
         return VoteCounts({

@@ -136,6 +136,8 @@ interface ISwedishVoting {
     function VOTE_NO() external pure returns (uint8);
     function MIN_SESSION_DURATION() external pure returns (uint256);
     function MAX_SESSION_DURATION() external pure returns (uint256);
+    function TIMESTAMP_BUFFER() external pure returns (uint256);
+    function MAX_BATCH_SIZE() external pure returns (uint256);
     function ADMIN_ROLE() external pure returns (bytes32);
     function admin() external view returns (address);
 }
