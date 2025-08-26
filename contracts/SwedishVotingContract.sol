@@ -7,7 +7,7 @@ import "./interfaces/ISwedishVoting.sol";
 /// @title Swedish Association Voting Contract
 /// @notice Enables secure, transparent voting for Swedish association governance processes
 /// @dev Implements immutable admin access control with wallet-based member identification
-/// @dev Storage layout for upgrade compatibility (if needed later):
+/// @dev Storage layout (non-upgradeable design):
 /// @dev   Slot 0: _admin (address, immutable)
 /// @dev   Slot 1: _sessionCounter (uint256)
 /// @dev   Slot 2: _members (mapping(address => bool))
@@ -373,4 +373,6 @@ contract SwedishVotingContract is AccessControl, ISwedishVoting {
     ) external view sessionExists(sessionId) returns (bool) {
         return _sessions[sessionId].hasVoted[questionId][member];
     }
+
+
 }

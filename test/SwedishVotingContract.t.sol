@@ -616,7 +616,6 @@ contract SwedishVotingContractTest is Test {
 
     // === Gas Optimization Tests ===
     
-    // Note: Gas optimization test removed due to setup issues
     // The batch vote functionality is tested in test_BatchVote_Success
     
     function test_Gas_BatchAddMembersIsEfficient() public {
