@@ -12,14 +12,14 @@ cp env.example .env
 # Edit .env with your values
 
 # 2. Deploy to Amoy testnet (newer, recommended)
-forge script scripts/DeployAmoy.s.sol \
+forge script scripts/deploy/DeployAmoy.s.sol \
   --rpc-url https://rpc-amoy.polygon.technology \
   --broadcast \
   --verify \
   --private-key $PRIVATE_KEY
 
 # 3. Test functionality
-forge script scripts/TestAmoy.s.sol \
+forge script scripts/test/TestAmoy.s.sol \
   --rpc-url https://rpc-amoy.polygon.technology \
   --broadcast \
   --private-key $PRIVATE_KEY
@@ -27,9 +27,10 @@ forge script scripts/TestAmoy.s.sol \
 
 **📖 Full Guides:**
 
-- **Quick Start**: [`QUICK_START.md`](QUICK_START.md) - 5-minute setup
-- **Comprehensive Guide**: [`POLYGON_TESTNETS_GUIDE.md`](POLYGON_TESTNETS_GUIDE.md) - Complete deployment guide
-- **Design Documentation**: [`docs/DESIGN_SUMMARY.md`](docs/DESIGN_SUMMARY.md) - Technical specifications
+- **Quick Start**: [`docs/user-guides/QUICK_START.md`](docs/user-guides/QUICK_START.md) - 5-minute setup
+- **Comprehensive Guide**: [`docs/user-guides/POLYGON_TESTNETS_GUIDE.md`](docs/user-guides/POLYGON_TESTNETS_GUIDE.md) - Complete deployment guide
+- **Design Documentation**: [`docs/technical/DESIGN_SUMMARY.md`](docs/technical/DESIGN_SUMMARY.md) - Technical specifications
+- **Navigation Guide**: [`NAVIGATION.md`](NAVIGATION.md) - Repository structure & quick links
 
 ## Overview
 
@@ -320,29 +321,39 @@ votingContract.finalizeSession(sessionId, resultsHash);
 ### Project Structure
 
 ```
-├── contracts/
+├── contracts/                    # Smart contracts
 │   ├── SwedishVotingContract.sol
 │   └── interfaces/
 │       └── ISwedishVoting.sol
-├── test/
+├── scripts/                      # Deployment & testing scripts
+│   ├── deploy/                   # Deployment scripts
+│   │   ├── DeployAmoy.s.sol
+│   │   ├── DeployMumbai.s.sol
+│   │   └── Deploy.s.sol
+│   ├── test/                     # Testing scripts
+│   │   ├── TestAmoy.s.sol
+│   │   ├── SimpleTestAmoy.s.sol
+│   │   └── TestMumbai.s.sol
+│   └── utils/                    # Utility scripts
+│       └── setup-mumbai.sh
+├── docs/                         # Documentation
+│   ├── user-guides/              # User-focused guides
+│   │   ├── QUICK_START.md
+│   │   └── POLYGON_TESTNETS_GUIDE.md
+│   ├── technical/                # Technical documentation
+│   │   ├── DESIGN_SUMMARY.md
+│   │   ├── SECURITY_FIXES_SUMMARY.md
+│   │   └── IMPLEMENTATION_SUMMARY.md
+│   └── reference/                # Reference materials
+│       ├── design/
+│       └── architecture/
+├── test/                         # Foundry test files
 │   └── SwedishVotingContract.t.sol
-├── scripts/
-│   ├── DeployAmoy.s.sol
-│   ├── DeployMumbai.s.sol
-│   ├── TestAmoy.s.sol
-│   └── TestMumbai.s.sol
-├── docs/
-│   ├── design/
-│   │   ├── technical-specification.md
-│   │   ├── security-analysis.md
-│   │   └── architecture-decisions.md
-│   └── architecture/
-│       ├── contract-interfaces.md
-│       └── threat-model.md
-├── POLYGON_TESTNETS_GUIDE.md
-├── QUICK_START.md
-└── README.md
+├── NAVIGATION.md                 # Repository navigation guide
+└── README.md                     # Project overview
 ```
+
+**📖 See [NAVIGATION.md](NAVIGATION.md) for detailed directory structure and quick links.**
 
 ### Contributing
 

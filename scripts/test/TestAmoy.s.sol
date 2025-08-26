@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {Script, console2} from "forge-std/Script.sol";
-import {SwedishVotingContract} from "../contracts/SwedishVotingContract.sol";
+import {Script, console2} from "../../lib/forge-std/src/Script.sol";
+import {SwedishVotingContract} from "../../contracts/SwedishVotingContract.sol";
+import {ISwedishVoting} from "../../contracts/interfaces/ISwedishVoting.sol";
 
-/// @title Swedish Voting Contract Mumbai Testing Script
-/// @notice Tests all major functionality of the deployed contract on Mumbai
+/// @title Swedish Voting Contract Amoy Testing Script
+/// @notice Tests all major functionality of the deployed contract on Polygon Amoy testnet
 /// @dev Comprehensive testing of admin functions, member management, and voting
-contract TestMumbaiScript is Script {
+contract TestAmoyScript is Script {
     function run() external {
         // Load environment variables
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -23,7 +24,7 @@ contract TestMumbaiScript is Script {
         uint256 member2Key = 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a;
         uint256 member3Key = 0x7c852118e8d7e3b9d5b4b0d7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b;
         
-        console2.log("=== Mumbai Testnet Testing Starting ===");
+        console2.log("=== Polygon Amoy Testnet Testing Starting ===");
         console2.log("Contract Address:", contractAddress);
         console2.log("Admin Address:", admin);
         console2.log("Test Members:", member1, member2, member3);
@@ -35,7 +36,7 @@ contract TestMumbaiScript is Script {
         console2.log("\n=== Test 1: Initial State Verification ===");
         require(votingContract.admin() == admin, "Admin not set correctly");
         require(votingContract.getSessionCount() == 0, "Session count should be 0");
-        console2.log("✅ Initial state verified");
+        console2.log("Initial state verified");
         
         // Test 2: Add members (as admin)
         console2.log("\n=== Test 2: Adding Members ===");
@@ -52,7 +53,7 @@ contract TestMumbaiScript is Script {
         require(votingContract.isMember(member1), "Member 1 not added");
         require(votingContract.isMember(member2), "Member 2 not added");
         require(votingContract.isMember(member3), "Member 3 not added");
-        console2.log("✅ All members added successfully");
+        console2.log("All members added successfully");
         
         // Test 3: Create voting session
         console2.log("\n=== Test 3: Creating Voting Session ===");
@@ -72,18 +73,18 @@ contract TestMumbaiScript is Script {
         
         // Verify session was created
         require(votingContract.getSessionCount() == 1, "Session not created");
-        console2.log("✅ Voting session created successfully");
+        console2.log("Voting session created successfully");
         
         // Test 4: Get session info
         console2.log("\n=== Test 4: Session Information ===");
-        (uint256 startTime, uint256 endTime, uint256 questionCount, bool isPaused, bool isFinalized, bytes32 resultsHash) = votingContract.getSessionInfo(1);
+        ISwedishVoting.SessionInfo memory sessionInfo = votingContract.getSessionInfo(1);
         console2.log("Session 1 Info:");
-        console2.log("  Start Time:", startTime);
-        console2.log("  End Time:", endTime);
-        console2.log("  Question Count:", questionCount);
-        console2.log("  Is Paused:", isPaused);
-        console2.log("  Is Finalized:", isFinalized);
-        console2.log("✅ Session info retrieved");
+        console2.log("  Start Time:", sessionInfo.startTime);
+        console2.log("  End Time:", sessionInfo.endTime);
+        console2.log("  Question Count:", sessionInfo.questionCount);
+        console2.log("  Is Paused:", sessionInfo.isPaused);
+        console2.log("  Is Finalized:", sessionInfo.isFinalized);
+        console2.log("Session info retrieved");
         
         // Test 5: Cast votes (as members)
         console2.log("\n=== Test 5: Casting Votes ===");
@@ -93,46 +94,46 @@ contract TestMumbaiScript is Script {
         votingContract.castVote(1, 0, 1); // Yes on question 0
         votingContract.castVote(1, 1, 2); // No on question 1
         vm.stopBroadcast();
-        console2.log("✅ Member 1 votes cast");
+        console2.log("Member 1 votes cast");
         
         // Member 2 votes
         vm.startBroadcast(member2Key);
         votingContract.castVote(1, 0, 1); // Yes on question 0
         votingContract.castVote(1, 1, 1); // Yes on question 1
         vm.stopBroadcast();
-        console2.log("✅ Member 2 votes cast");
+        console2.log("Member 2 votes cast");
         
         // Member 3 votes
         vm.startBroadcast(member3Key);
         votingContract.castVote(1, 0, 2); // No on question 0
         votingContract.castVote(1, 1, 0); // Abstain on question 1
         vm.stopBroadcast();
-        console2.log("✅ Member 3 votes cast");
+        console2.log("Member 3 votes cast");
         
         // Test 6: Check vote counts (public question only)
         console2.log("\n=== Test 6: Vote Counts (Public Question) ===");
-        (uint256 abstain, uint256 yes, uint256 no) = votingContract.getVoteCounts(1, 0);
+        ISwedishVoting.VoteCounts memory voteCounts = votingContract.getVoteCounts(1, 0);
         console2.log("Question 0 Vote Counts:");
-        console2.log("  Abstain:", abstain);
-        console2.log("  Yes:", yes);
-        console2.log("  No:", no);
-        console2.log("✅ Vote counts retrieved");
+        console2.log("  Abstain:", voteCounts.abstainCount);
+        console2.log("  Yes:", voteCounts.yesCount);
+        console2.log("  No:", voteCounts.noCount);
+        console2.log("Vote counts retrieved");
         
         // Test 7: Check voting status
         console2.log("\n=== Test 7: Voting Status ===");
         require(votingContract.hasVoted(1, 0, member1), "Member 1 vote not recorded");
         require(votingContract.hasVoted(1, 0, member2), "Member 2 vote not recorded");
         require(votingContract.hasVoted(1, 0, member3), "Member 3 vote not recorded");
-        console2.log("✅ All votes recorded correctly");
+        console2.log("All votes recorded correctly");
         
         // Test 8: Try to vote twice (should fail)
         console2.log("\n=== Test 8: Double Voting Prevention ===");
         vm.startBroadcast(member1Key);
         try votingContract.castVote(1, 0, 1) {
-            console2.log("❌ Double voting should have failed");
+            console2.log("Double voting should have failed");
             revert("Double voting test failed");
         } catch {
-            console2.log("✅ Double voting correctly prevented");
+            console2.log("Double voting correctly prevented");
         }
         vm.stopBroadcast();
         
@@ -143,10 +144,10 @@ contract TestMumbaiScript is Script {
         
         vm.startBroadcast(nonMemberKey);
         try votingContract.castVote(1, 0, 1) {
-            console2.log("❌ Non-member voting should have failed");
+            console2.log("Non-member voting should have failed");
             revert("Non-member voting test failed");
         } catch {
-            console2.log("✅ Non-member voting correctly prevented");
+            console2.log("Non-member voting correctly prevented");
         }
         vm.stopBroadcast();
         
@@ -160,15 +161,15 @@ contract TestMumbaiScript is Script {
         votes[1] = 2; // No
         
         vm.startBroadcast(member1Key);
-        try votingContract.castBatchVote(1, questionIds, votes) {
-            console2.log("❌ Batch voting should have failed (already voted)");
+        try votingContract.batchVote(1, questionIds, votes) {
+            console2.log("Batch voting should have failed (already voted)");
         } catch {
-            console2.log("✅ Batch voting correctly prevented for existing votes");
+            console2.log("Batch voting correctly prevented for existing votes");
         }
         vm.stopBroadcast();
         
         console2.log("\n=== All Tests Completed Successfully! ===");
-        console2.log("Contract is working correctly on Mumbai testnet!");
+        console2.log("Contract is working correctly on Polygon Amoy testnet!");
         console2.log("Ready for production deployment to Polygon mainnet.");
     }
 }

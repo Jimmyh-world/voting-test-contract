@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {Script, console2} from "forge-std/Script.sol";
-import {SwedishVotingContract} from "../contracts/SwedishVotingContract.sol";
+import {Script, console2} from "../../lib/forge-std/src/Script.sol";
+import {SwedishVotingContract} from "../../contracts/SwedishVotingContract.sol";
 
 /// @title Swedish Voting Contract Deployment Script
 /// @notice Deploys the Swedish Association Voting Contract
