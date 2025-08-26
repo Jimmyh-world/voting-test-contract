@@ -3,4 +3,31 @@ src = "src"
 out = "out"
 libs = ["lib"]
 
+# Mumbai Testnet Configuration
+[profile.mumbai]
+src = "src"
+out = "out"
+libs = ["lib"]
+rpc_url = "${MUMBAI_RPC_URL}"
+etherscan_api_key = "${POLYGONSCAN_API_KEY}"
+chain_id = 80001
+
+# Polygon Amoy Testnet Configuration (Newer testnet)
+[profile.amoy]
+src = "src"
+out = "out"
+libs = ["lib"]
+rpc_url = "${AMOY_RPC_URL}"
+etherscan_api_key = "${POLYGONSCAN_API_KEY}"
+chain_id = 80002
+
+# Polygon Mainnet Configuration
+[profile.polygon]
+src = "src"
+out = "out"
+libs = ["lib"]
+rpc_url = "https://polygon-rpc.com"
+etherscan_api_key = "${POLYGONSCAN_API_KEY}"
+chain_id = 137
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

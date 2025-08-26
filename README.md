@@ -2,6 +2,35 @@
 
 A secure, transparent smart contract for Swedish association (förening) governance processes including Annual General Meetings and Special Meetings.
 
+## 🚀 **Quick Start**
+
+### **Deploy to Polygon Testnet (Recommended)**
+
+```bash
+# 1. Set up environment
+cp env.example .env
+# Edit .env with your values
+
+# 2. Deploy to Amoy testnet (newer, recommended)
+forge script scripts/DeployAmoy.s.sol \
+  --rpc-url https://rpc-amoy.polygon.technology \
+  --broadcast \
+  --verify \
+  --private-key $PRIVATE_KEY
+
+# 3. Test functionality
+forge script scripts/TestAmoy.s.sol \
+  --rpc-url https://rpc-amoy.polygon.technology \
+  --broadcast \
+  --private-key $PRIVATE_KEY
+```
+
+**📖 Full Guides:**
+
+- **Quick Start**: [`QUICK_START.md`](QUICK_START.md) - 5-minute setup
+- **Comprehensive Guide**: [`POLYGON_TESTNETS_GUIDE.md`](POLYGON_TESTNETS_GUIDE.md) - Complete deployment guide
+- **Design Documentation**: [`docs/DESIGN_SUMMARY.md`](docs/DESIGN_SUMMARY.md) - Technical specifications
+
 ## Overview
 
 This contract enables Swedish associations to conduct secure, transparent voting on governance matters with the following key features:
@@ -121,9 +150,16 @@ forge build
 Create a `.env` file with the following variables:
 
 ```env
-PRIVATE_KEY=your_deployer_private_key
-ADMIN_ADDRESS=your_admin_address
-RPC_URL=your_rpc_url
+# Polygon Testnet Configuration
+AMOY_RPC_URL="https://rpc-amoy.polygon.technology"
+MUMBAI_RPC_URL="https://rpc-mumbai.maticvigil.com/"
+
+# API Keys (Get free from https://polygonscan.com/apis)
+POLYGONSCAN_API_KEY="your_polygonscan_api_key_here"
+
+# Deployment Configuration
+PRIVATE_KEY="your_private_key_here"
+ADMIN_ADDRESS="your_admin_address_here"
 ```
 
 ## Testing
@@ -165,18 +201,33 @@ anvil
 forge script scripts/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast
 ```
 
-### Testnet Deployment
+### Polygon Testnet Deployment
 
 ```bash
-# Deploy to Sepolia
-forge script scripts/Deploy.s.sol --rpc-url $SEPOLIA_RPC_URL --broadcast --verify
+# Deploy to Amoy testnet (recommended)
+forge script scripts/DeployAmoy.s.sol \
+  --rpc-url https://rpc-amoy.polygon.technology \
+  --broadcast \
+  --verify \
+  --private-key $PRIVATE_KEY
+
+# Deploy to Mumbai testnet
+forge script scripts/DeployMumbai.s.sol \
+  --rpc-url https://rpc-mumbai.maticvigil.com/ \
+  --broadcast \
+  --verify \
+  --private-key $PRIVATE_KEY
 ```
 
-### Mainnet Deployment
+### Polygon Mainnet Deployment
 
 ```bash
-# Deploy to Ethereum mainnet
-forge script scripts/Deploy.s.sol --rpc-url $MAINNET_RPC_URL --broadcast --verify
+# Deploy to Polygon mainnet
+forge script scripts/Deploy.s.sol \
+  --rpc-url https://polygon-rpc.com \
+  --broadcast \
+  --verify \
+  --private-key $PRIVATE_KEY
 ```
 
 ## Usage Examples
@@ -270,14 +321,26 @@ votingContract.finalizeSession(sessionId, resultsHash);
 
 ```
 ├── contracts/
-│   └── SwedishVotingContract.sol
+│   ├── SwedishVotingContract.sol
+│   └── interfaces/
+│       └── ISwedishVoting.sol
 ├── test/
 │   └── SwedishVotingContract.t.sol
 ├── scripts/
-│   └── Deploy.s.sol
+│   ├── DeployAmoy.s.sol
+│   ├── DeployMumbai.s.sol
+│   ├── TestAmoy.s.sol
+│   └── TestMumbai.s.sol
 ├── docs/
 │   ├── design/
+│   │   ├── technical-specification.md
+│   │   ├── security-analysis.md
+│   │   └── architecture-decisions.md
 │   └── architecture/
+│       ├── contract-interfaces.md
+│       └── threat-model.md
+├── POLYGON_TESTNETS_GUIDE.md
+├── QUICK_START.md
 └── README.md
 ```
 
